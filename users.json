@@ -24,7 +24,10 @@
     "name": "Behruz",
     "phone": "+998910438333",
     "is_admin": false,
-    "fav": [],
+    "fav": [
+      "795",
+      "71"
+    ],
     "rand_hist": [
       "630",
       "31",

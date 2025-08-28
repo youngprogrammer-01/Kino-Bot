@@ -364,17 +364,19 @@ def full_caption(name: str, year: str, genre: str, duration: str, code: str,
     )
 
 def preview_channel_caption(code: str) -> str:
-    bot_handle = (Bot_url or "").lstrip("@")
+    # Kod orqali bazadan nomni olamiz
+    bot_url = f"https://t.me/{Bot_url.lstrip('@')}"
+    rec = db.get_movie(code) or {}
+    s_name = html.escape(rec.get("name", "Kino"))
     channel_url = f"https://t.me/{PREVIEW_CHANNEL_ID.lstrip('@')}"
     s_code = html.escape(code)
     return (
-        "🎬: Ushbu kino botimizga to'liq holda joylandi❗\n"
+        f"🎬: \"{s_name}\" botimizga to'liq holda joylandi❗\n"
         "➖➖➖➖➖➖➖➖➖➖\n"
         "• Filmni yuklab olish uchun botga kino kodini yuboring\n\n"
         f"• 🔢 Kino kodi: <code>{s_code}</code>\n\n"
         "📥 Kino kodini bu yerga  yuboring: 👇\n"
-        f"@{bot_handle}\n\n"
-        f"🔹Kanal: ©️KinolarOlami ({channel_url})"
+        f"🔹Bot: <a href=\"{bot_url}\">CinemadiaUz bot</a>"
     )
 
 # ====== MOVIE INTERACTIVE (likes/ratings) ======

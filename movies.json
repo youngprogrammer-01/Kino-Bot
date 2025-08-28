@@ -119,5 +119,32 @@
       }
     },
     "broken": false
+  },
+    "71": {
+    "name": "Mening yaratuvchim",
+    "year": "2020",
+    "genre": "#Tarjima-Kinolar , #Detektivlar , #Ilmiy-fantastika , #Jang , #Xorijiy-filmlar , #Jinoyat , #Fantastika , #Sarguzasht",
+    "country": "Buyuk Britaniya , Vengriya , AQSh",
+    "imdb": "8/10",
+    "quality": "1080p",
+    "language": "Uzbekcha",
+    "duration": "1 soat 40 daqiqa",
+    "full_message_id": 17,
+    "preview_message_id": 18,
+    "stats": {
+      "views": 1,
+      "likes": {
+        "users": [],
+        "count": 0
+      },
+      "ratings": {
+        "users": {
+          "8398713466": 5
+        },
+        "sum": 5,
+        "count": 1
+      }
+    },
+    "broken": false
   }
 }
