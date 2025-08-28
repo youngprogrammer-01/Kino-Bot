@@ -1139,25 +1139,6 @@ async def msg_sub_check(m: types.Message):
     else:
         await m.answer("Kanalga obuna bo'ling:", reply_markup=subscribe_kb())
 
-# ====== FALLBACK: notanish xabarlar ======
-@dp.message()
-async def fallback_unknown(m: types.Message, state: FSMContext):
-    # FSM ichida bo'lsa, boshqa handlerlar ishlaydi
-    cur = await state.get_state()
-    if cur:
-        return
-    u = db.get_user(m.from_user.id)
-    # Adminlar uchun umumiy fallback bermaymiz (admin menyusi bor)
-    if u and u.get("is_admin"):
-        return
-    # Faqat matn uchun ko'rsatma qaytaramiz
-    if m.text:
-        await m.answer(
-            "Noto'g'ri format. Kino olish uchun ‘🎟 Kod yuborish’ tugmasini bosing va 2-3 xonali kodni yuboring.\n"
-            "Random kino uchun ‘🔍 Random’ tugmasidan foydalaning.",
-            reply_markup=KB.user()
-        )
-
 @dp.message(F.text == "🎟 Kod yuborish")
 async def msg_send_code(m: types.Message):
     await m.answer("Kod raqamini yuboring (masalan, 12 yoki 345)")
