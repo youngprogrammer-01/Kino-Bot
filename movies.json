@@ -1,0 +1,123 @@
+{
+  "294": {
+    "name": "Megan 2.0",
+    "year": "2025",
+    "genre": "Fantastika",
+    "duration": "1 soat 59 minut",
+    "full_message_id": 10,
+    "preview_message_id": 10,
+    "stats": {
+      "views": 46,
+      "likes": {
+        "users": [],
+        "count": 0
+      },
+      "ratings": {
+        "users": {},
+        "sum": 0,
+        "count": 0
+      }
+    },
+    "broken": true
+  },
+  "630": {
+    "name": "Megan 2.0",
+    "year": "2025",
+    "genre": "Fantastika",
+    "duration": "1 soat 59 minut",
+    "full_message_id": 12,
+    "preview_message_id": 13,
+    "stats": {
+      "views": 5,
+      "likes": {
+        "users": [
+          900574498
+        ],
+        "count": 1
+      },
+      "ratings": {
+        "users": {
+          "900574498": 5
+        },
+        "sum": 5,
+        "count": 1
+      }
+    },
+    "broken": false
+  },
+  "31": {
+    "name": "Fantastik to'rtlik: Ilk qadamlar",
+    "year": "2025",
+    "genre": "Sarguzashtlar / Boevik / Fantastika",
+    "duration": "1 soat 46 minut",
+    "full_message_id": 13,
+    "preview_message_id": 14,
+    "stats": {
+      "views": 2,
+      "likes": {
+        "users": [
+          8398713466
+        ],
+        "count": 1
+      },
+      "ratings": {
+        "users": {
+          "8398713466": 5
+        },
+        "sum": 5,
+        "count": 1
+      }
+    },
+    "broken": false
+  },
+  "40": {
+    "name": "Moviy qo'ng'iz",
+    "year": "2023",
+    "genre": "Jangari / Sarguzasht / Fantastika",
+    "duration": "2 soat",
+    "full_message_id": 14,
+    "preview_message_id": 15,
+    "stats": {
+      "views": 17,
+      "likes": {
+        "users": [
+          8398713466
+        ],
+        "count": 1
+      },
+      "ratings": {
+        "users": {
+          "8398713466": 5
+        },
+        "sum": 5,
+        "count": 1
+      }
+    },
+    "broken": false
+  },
+  "086": {
+    "name": "Qiyomat kuni",
+    "year": "2021",
+    "genre": "Fantastika, Drama",
+    "duration": "1 soat 49 daqiqa",
+    "full_message_id": 15,
+    "preview_message_id": 16,
+    "stats": {
+      "views": 8,
+      "likes": {
+        "users": [
+          8398713466
+        ],
+        "count": 1
+      },
+      "ratings": {
+        "users": {
+          "8398713466": 5
+        },
+        "sum": 5,
+        "count": 1
+      }
+    },
+    "broken": false
+  }
+}

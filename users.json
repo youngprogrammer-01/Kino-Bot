@@ -1,0 +1,35 @@
+{
+  "6470924459": {
+    "name": "Behruzbek",
+    "phone": "+998330437375",
+    "is_admin": true,
+    "fav": [],
+    "rand_hist": []
+  },
+  "7012526701": {
+    "name": "ruffy",
+    "phone": "+998887870824",
+    "is_admin": false
+  },
+  "900574498": {
+    "name": "Abdulla",
+    "phone": "+998940593733",
+    "is_admin": false,
+    "fav": [
+      "630"
+    ],
+    "rand_hist": []
+  },
+  "8398713466": {
+    "name": "Behruz",
+    "phone": "+998910438333",
+    "is_admin": false,
+    "fav": [],
+    "rand_hist": [
+      "630",
+      "31",
+      "40",
+      "086"
+    ]
+  }
+}
