@@ -52,6 +52,12 @@ try:
     ADMIN_IDS = [int(x.strip()) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip()]
 except Exception:
     ADMIN_IDS = []
+# Super admin: bitta foydalanuvchi. .env dagi SUPER_ADMIN_ID bo'lsa shu, bo'lmasa ADMIN_IDS[0]
+try:
+    _super_env = os.getenv("SUPER_ADMIN_ID", "")
+    SUPER_ADMIN_ID = int(_super_env) if _super_env.strip() else (ADMIN_IDS[0] if ADMIN_IDS else None)
+except Exception:
+    SUPER_ADMIN_ID = (ADMIN_IDS[0] if ADMIN_IDS else None)
 if not BOT_TOKEN or not ADMIN_PHONES:
     raise RuntimeError(".env da BOT_TOKEN, ADMIN_PHONES to'ldiring. Kanal ID lar uchun FULL_CHANNEL_ID va PREVIEW_CHANNEL_ID ni ham kiriting.")
 
@@ -138,7 +144,18 @@ class DB:
         existing = self.users.get(uid, {})
         fav = existing.get("fav", [])
         rand_hist = existing.get("rand_hist", [])
-        self.users[uid] = {"name": name, "phone": self.norm_phone(phone), "is_admin": is_admin, "fav": fav, "rand_hist": rand_hist}
+        role = existing.get("role")
+        # Agar rol hali belgilanmagan bo'lsa, is_admin True bo'lsa 'admin', aks holda 'user'
+        if not role:
+            role = "admin" if is_admin else "user"
+        self.users[uid] = {
+            "name": name,
+            "phone": self.norm_phone(phone),
+            "is_admin": is_admin,
+            "role": role,
+            "fav": fav,
+            "rand_hist": rand_hist,
+        }
         self.save_users()
 
     def get_user(self, uid: int) -> Optional[Dict[str, Any]]:
@@ -151,6 +168,10 @@ class DB:
             if "rand_hist" not in u:
                 u["rand_hist"] = []
                 changed = True
+            # Backward compat: rol maydonini to'ldiramiz
+            if "role" not in u:
+                u["role"] = "admin" if u.get("is_admin") else "user"
+                changed = True
             if changed:
                 self.users[uid] = u
                 self.save_users()
@@ -158,7 +179,24 @@ class DB:
 
     def is_admin(self, uid: int) -> bool:
         u = self.get_user(uid)
-        return bool(u and u.get("is_admin"))
+        if not u:
+            return False
+        role = u.get("role")
+        return bool(u.get("is_admin") or role in {"admin", "super_admin"})
+
+    def is_super_admin(self, uid: int) -> bool:
+        # Rolga ko'ra yoki konfiguratsiyadagi SUPER_ADMIN_ID ga ko'ra
+        if SUPER_ADMIN_ID is not None and uid == SUPER_ADMIN_ID:
+            return True
+        u = self.get_user(uid)
+        return bool(u and u.get("role") == "super_admin")
+
+    def set_role(self, uid: int, role: str):
+        u = self.get_user(uid) or {"name": "?", "phone": "", "fav": [], "rand_hist": []}
+        u["role"] = role
+        u["is_admin"] = True if role in {"admin", "super_admin"} else False
+        self.users[uid] = u
+        self.save_users()
 
     def add_movie(self, code: str, info: Dict[str, Any]):
         # Default statistik maydonlarni qo'shib saqlaymiz
@@ -322,6 +360,19 @@ class KB:
             ], resize_keyboard=True
         )
 
+    @staticmethod
+    def super_admin():
+        return types.ReplyKeyboardMarkup(
+            keyboard=[
+                [types.KeyboardButton(text="🎬 Kanalga kino joylash")],
+                [types.KeyboardButton(text="👥 Foydalanuvchilar")],
+                [types.KeyboardButton(text="👥 Botdagi azolar")],
+                [types.KeyboardButton(text="📣 Kanaldagi azolar")],
+                [types.KeyboardButton(text="➕ Yangi admin qo'shish")],
+                [types.KeyboardButton(text="🗑️ Adminni o'chirish")],
+            ], resize_keyboard=True
+        )
+
 
     @staticmethod
     def remove():
@@ -477,6 +528,10 @@ class ContactSelf(BaseFilter):
     async def __call__(self, m: types.Message) -> bool:
         return bool(m.contact and m.contact.user_id == m.from_user.id)
 
+class IsSuperAdmin(BaseFilter):
+    async def __call__(self, m: types.Message) -> bool:
+        return db.is_super_admin(m.from_user.id)
+
 class IsCode(BaseFilter):
     """Foydalanuvchi xabari kino kodi ko'rinishida ekanini tekshiradi (faqat 2-3 xonali raqam)."""
     async def __call__(self, m: types.Message) -> bool:
@@ -500,6 +555,10 @@ class Up(StatesGroup):
     duration = State()
     preview = State()
 
+class AdminManage(StatesGroup):
+    add_admin = State()
+    del_admin = State()
+
 # ====== COMMANDS ======
 @dp.message(Command("start"))
 async def start(m: types.Message, state: FSMContext):
@@ -516,7 +575,9 @@ async def start(m: types.Message, state: FSMContext):
         await state.update_data(start_code=payload_code)
     u = db.get_user(m.from_user.id)
     if u:
-        if u.get("is_admin"):
+        if db.is_super_admin(m.from_user.id):
+            await m.answer("Salom Super Admin! Boshqaruv menyusi: ", reply_markup=KB.super_admin())
+        elif u.get("is_admin"):
             await m.answer("Salom Admin! Kanalga kino joylashingiz mumkin!", reply_markup=KB.admin())
         else:
             # Agar payload bilan kelgan bo'lsa va obuna bo'lsa, darhol kinoni yuboramiz
@@ -563,14 +624,26 @@ async def reg_name(m: types.Message, state: FSMContext):
     if len(name) < 2:
         await m.answer("Ism kamida 2 belgi bo'lsin.")
         return
-    # Telefon so'ralmaydi; adminlik ADMIN_IDS orqali tekshiriladi
-    is_admin = db.is_admin_id(m.from_user.id)
+    # Telefon so'ralmaydi; adminlik ADMIN_IDS va SUPER_ADMIN_ID orqali tekshiriladi
+    uid = m.from_user.id
+    role = "user"
+    if SUPER_ADMIN_ID is not None and uid == SUPER_ADMIN_ID:
+        role = "super_admin"
+    elif db.is_admin_id(uid):
+        role = "admin"
+    is_admin = role in {"admin", "super_admin"}
     data = await state.get_data()
     pending_code = data.get("start_code")
-    db.upsert_user(m.from_user.id, name=name, phone="", is_admin=is_admin)
+    db.upsert_user(uid, name=name, phone="", is_admin=is_admin)
+    # Rolni alohida belgilaymiz
+    if role != "user":
+        db.set_role(uid, role)
     await state.clear()
     if is_admin:
-        await m.answer("Admin sifatida ro'yxatdan o'tdingiz. Endi kino joylashni boshlang yoki menyuni tanlang.", reply_markup=KB.admin())
+        if role == "super_admin":
+            await m.answer("Super admin sifatida ro'yxatdan o'tdingiz. Boshqaruv menyusi: ", reply_markup=KB.super_admin())
+        else:
+            await m.answer("Admin sifatida ro'yxatdan o'tdingiz. Endi kino joylashni boshlang yoki menyuni tanlang.", reply_markup=KB.admin())
     else:
         # Agar deep-link kodi bo'lsa va obuna bo'lsa, avtomatik kino yuboramiz
         if pending_code and await is_subscribed_to_preview(m.from_user.id):
@@ -599,11 +672,70 @@ async def reg_contact(m: types.Message, state: FSMContext):
     phone = m.contact.phone_number
     is_admin = db.is_admin_phone(phone)
     db.upsert_user(m.from_user.id, name, phone, is_admin)
+    # Telefon orqali super admin belgilanmaydi; agar kerak bo'lsa, .env orqali beriladi
     await state.clear()
     if is_admin:
-        await m.answer("Admin sifatida ro'yxatdan o'tdingiz. Endi kino joylashni boshlang yoki menyuni tanlang.", reply_markup=KB.admin())
+        # Agar SUPER_ADMIN_ID bilan mos kelsa, super admin menyusi
+        if db.is_super_admin(m.from_user.id):
+            await m.answer("Super admin sifatida ro'yxatdan o'tdingiz. Boshqaruv menyusi: ", reply_markup=KB.super_admin())
+        else:
+            await m.answer("Admin sifatida ro'yxatdan o'tdingiz. Endi kino joylashni boshlang yoki menyuni tanlang.", reply_markup=KB.admin())
     else:
         await m.answer("Ro'yxatdan o'tdingiz! Kod yuboring.", reply_markup=KB.remove())
+
+# ====== SUPER ADMIN: Yangi admin qo'shish ======
+@dp.message(IsSuperAdmin(), F.text == "➕ Yangi admin qo'shish")
+async def sa_add_admin_start(m: types.Message, state: FSMContext):
+    await state.set_state(AdminManage.add_admin)
+    await m.answer("Yangi adminning Telegram user ID sini kiriting (raqam):", reply_markup=KB.remove())
+
+@dp.message(AdminManage.add_admin)
+async def sa_add_admin_apply(m: types.Message, state: FSMContext):
+    t = (m.text or "").strip()
+    try:
+        new_uid = int(t)
+    except Exception:
+        await m.answer("Noto'g'ri ID. Raqam ko'rinishida yuboring.")
+        return
+    if SUPER_ADMIN_ID is not None and new_uid == SUPER_ADMIN_ID:
+        await m.answer("Bu foydalanuvchi allaqachon super admin.")
+        await state.clear()
+        await m.answer("Menyu", reply_markup=KB.super_admin())
+        return
+    # Foydalanuvchini admin qilamiz
+    db.set_role(new_uid, "admin")
+    await state.clear()
+    await m.answer(f"✅ {new_uid} endi admin qilindi.", reply_markup=KB.super_admin())
+
+@dp.message(IsSuperAdmin(), F.text == "🗑️ Adminni o'chirish")
+async def sa_del_admin_start(m: types.Message, state: FSMContext):
+    await state.set_state(AdminManage.del_admin)
+    await m.answer("O'chiriladigan adminning Telegram user ID sini kiriting (raqam):", reply_markup=KB.remove())
+
+@dp.message(AdminManage.del_admin)
+async def sa_del_admin_apply(m: types.Message, state: FSMContext):
+    t = (m.text or "").strip()
+    try:
+        target_uid = int(t)
+    except Exception:
+        await m.answer("Noto'g'ri ID. Raqam ko'rinishida yuboring.")
+        return
+    if SUPER_ADMIN_ID is not None and target_uid == SUPER_ADMIN_ID:
+        await m.answer("Super adminni o'chirib bo'lmaydi.")
+        await state.clear()
+        await m.answer("Menyu", reply_markup=KB.super_admin())
+        return
+    u = db.get_user(target_uid)
+    if not u or not db.is_admin(target_uid):
+        # Foydalanuvchi mavjud bo'lmasa ham, role=user qilib qo'yish xavfsiz
+        db.set_role(target_uid, "user")
+        await state.clear()
+        await m.answer("✅ Agar admin bo'lsa, huquqlari olib tashlandi.", reply_markup=KB.super_admin())
+        return
+    # Oddiy adminning huquqlarini olib tashlaymiz
+    db.set_role(target_uid, "user")
+    await state.clear()
+    await m.answer(f"✅ {target_uid} adminlikdan olib tashlandi.", reply_markup=KB.super_admin())
 
 # ====== ADMIN UPLOAD ======
 @dp.message(IsAdmin(), F.text == "🎬 Kanalga kino joylash")

@@ -4,7 +4,8 @@
     "phone": "+998330437375",
     "is_admin": true,
     "fav": [],
-    "rand_hist": []
+    "rand_hist": [],
+    "role": "admin"
   },
   "7012526701": {
     "name": "ruffy",
@@ -33,6 +34,7 @@
       "31",
       "40",
       "086"
-    ]
+    ],
+    "role": "user"
   }
 }
